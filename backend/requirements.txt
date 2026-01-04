@@ -7,3 +7,6 @@ pytest
 httpx
 numpy
 scipy
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart

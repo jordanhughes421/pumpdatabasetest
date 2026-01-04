@@ -8,7 +8,22 @@ class SeriesType(str, Enum):
     efficiency = "efficiency"
     power = "power"
 
+class UserRole(str, Enum):
+    admin = "admin"
+    editor = "editor"
+    viewer = "viewer"
+
 # Base Models
+
+class OrganizationBase(SQLModel):
+    name: str
+
+class UserBase(SQLModel):
+    email: str = Field(unique=True, index=True)
+    is_active: bool = True
+
+class MembershipBase(SQLModel):
+    role: UserRole = UserRole.viewer
 
 class PumpBase(SQLModel):
     manufacturer: str = Field(index=True)
@@ -33,11 +48,37 @@ class CurvePointBase(SQLModel):
 
 # Database Models
 
+class Organization(OrganizationBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    memberships: List["Membership"] = Relationship(back_populates="organization")
+    pumps: List["Pump"] = Relationship(back_populates="organization")
+
+class User(UserBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    hashed_password: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_login_at: Optional[datetime] = None
+
+    memberships: List["Membership"] = Relationship(back_populates="user")
+
+class Membership(MembershipBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    org_id: int = Field(foreign_key="organization.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    user: User = Relationship(back_populates="memberships")
+    organization: Organization = Relationship(back_populates="memberships")
+
 class Pump(PumpBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    org_id: int = Field(foreign_key="organization.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+    organization: Organization = Relationship(back_populates="pumps")
     curve_sets: List["CurveSet"] = Relationship(back_populates="pump", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
 class CurveSet(CurveSetBase, table=True):
@@ -113,6 +154,7 @@ class PumpCreate(PumpBase):
 
 class PumpRead(PumpBase):
     id: int
+    org_id: int
     created_at: datetime
     updated_at: datetime
 
@@ -123,3 +165,29 @@ class PumpUpdate(SQLModel):
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     meta_data: Optional[Dict[str, Any]] = None
+
+# Auth & Org Schemas
+class Token(SQLModel):
+    access_token: str
+    token_type: str
+    user: "UserRead"
+    active_org: "OrganizationRead"
+    role: UserRole
+
+class UserLogin(SQLModel):
+    email: str
+    password: str
+
+class UserRead(UserBase):
+    id: int
+    last_login_at: Optional[datetime]
+
+class OrganizationRead(OrganizationBase):
+    id: int
+    created_at: datetime
+
+class MembershipRead(MembershipBase):
+    id: int
+    user: UserRead
+    org_id: int
+    created_at: datetime

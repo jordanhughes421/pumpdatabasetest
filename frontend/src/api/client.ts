@@ -11,6 +11,25 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 export const getPumps = async () => {
   const response = await api.get('/pumps/');
   return response.data;
@@ -73,5 +92,26 @@ export const validateCurvePoints = async (data: any) => {
 
 export const evaluateSeries = async (seriesId: number, flow: number, head: number | null) => {
     const response = await api.post(`/curve-sets/series/${seriesId}/evaluate`, { flow, head_optional: head });
+    return response.data;
+};
+
+// Admin/Org API
+export const getMembers = async (orgId: number) => {
+    const response = await api.get(`/orgs/${orgId}/members`);
+    return response.data;
+};
+
+export const createInvite = async (orgId: number, email: string, role: string) => {
+    const response = await api.post(`/orgs/${orgId}/invites`, { email, role });
+    return response.data;
+};
+
+export const updateMemberRole = async (orgId: number, userId: number, role: string) => {
+    const response = await api.patch(`/orgs/${orgId}/members/${userId}`, { role });
+    return response.data;
+};
+
+export const removeMember = async (orgId: number, userId: number) => {
+    const response = await api.delete(`/orgs/${orgId}/members/${userId}`);
     return response.data;
 };
