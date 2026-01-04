@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import PumpList from './pages/PumpList';
@@ -13,7 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 const queryClient = new QueryClient();
 
 // Protected Route Wrapper
-const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Element, requireAdmin?: boolean }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactElement, requireAdmin?: boolean }) => {
     const { user, role, isLoading } = useAuth();
     const location = useLocation();
 
