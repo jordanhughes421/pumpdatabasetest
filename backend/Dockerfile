@@ -5,7 +5,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy the backend code into a subdirectory so that 'backend' package imports work
+COPY . backend/
+
+# Set PYTHONPATH to include /app so that 'backend' package is importable
+ENV PYTHONPATH=/app
 
 # Run the application
 # We use host 0.0.0.0 to be accessible from outside the container

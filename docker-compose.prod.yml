@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./backend
+    restart: always
+    expose:
+      - "8000"
+    volumes:
+      - backend_data:/app/backend_data
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Point the DB to the volume path. Ensure the directory exists or is the volume root.
+      # Since we mount to /app/backend_data, we can put the DB there.
+      - SQLITE_DB_PATH=/app/backend_data/pump_curves_v2.db
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
