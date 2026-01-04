@@ -65,7 +65,7 @@ const Compare: React.FC = () => {
 
   // Prepare Plot Data
   const plotData: any[] = [];
-  curveSetsData.forEach((cs, idx) => {
+  curveSetsData.forEach((cs) => {
       const headSeries = cs.series.find((s: any) => s.type === 'head');
       if (headSeries) {
           plotData.push({

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPumps, createPump, deletePump } from '../api/client';
+import { getPumps, deletePump } from '../api/client';
 import { Link } from 'react-router-dom';
 
 const PumpList: React.FC = () => {

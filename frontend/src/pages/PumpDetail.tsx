@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { getPump, createCurveSet, deleteCurveSet } from '../api/client';
-import Plot from 'react-plotly.js';
 
 const PumpDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

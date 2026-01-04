@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { getCurveSet, addCurveSeries, deleteCurveSeries } from '../api/client';
+import { getCurveSet, addCurveSeries } from '../api/client';
 import Plot from 'react-plotly.js';
 
 const CurveSetDetail: React.FC = () => {
