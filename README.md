@@ -6,8 +6,18 @@ A production-quality, web-based application for managing and visualizing centrif
 
 - **Pump Library**: Store manufacturer, model, and metadata.
 - **Curve Management**: Organize curves into sets (e.g., specific RPM or Impeller).
-- **Data Entry**: Paste data directly from Excel/CSV (Flow, Value).
-- **Visualization**: Interactive plots for Head, Efficiency, and Power vs Flow.
+- **Data Entry & Validation**:
+    - Paste data directly from Excel/CSV (Flow, Value).
+    - Automatic validation for non-numeric values, negative flow, duplicates, etc.
+    - Warnings for efficiency > 100%, negative head, etc.
+- **Auto-Fit & Visualization**:
+    - Automatic curve fitting (Polynomial for Head, Spline/Poly for others).
+    - Interactive plots for Head, Efficiency, and Power vs Flow.
+    - Toggle between Raw Points and Fitted Curves.
+- **Duty Point Evaluation**:
+    - Enter a duty point (Flow, Head) to predict performance (Head, Eff, Power) using the fitted models.
+    - Extrapolation warnings.
+    - Residual calculation.
 - **Comparison**: Overlay multiple curves to compare performance.
 - **Responsive UI**: Built with React and Tailwind CSS.
 
@@ -72,4 +82,6 @@ docker-compose up --build
 1. **Create a Pump**: Go to "Add New Pump", enter details.
 2. **Add Curves**: Go to Pump Details -> "Add Curve Set".
 3. **Enter Data**: Click the curve set name. Select "Head vs Flow". Paste data (e.g. "0 100\n100 90"). Click Save. Repeat for Efficiency/Power.
-4. **Compare**: Click "Compare" in the nav bar. Select pumps and curve sets to overlay.
+   - **Validation**: The system will validate your points as you type/paste. Errors will block saving.
+4. **Duty Point**: Use the "Duty Point Evaluation" panel below the chart to check a specific operating point.
+5. **Compare**: Click "Compare" in the nav bar. Select pumps and curve sets to overlay.

@@ -7,6 +7,8 @@ const PumpList: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: pumps, isLoading, error } = useQuery({ queryKey: ['pumps'], queryFn: getPumps });
 
+  console.log("PumpList render:", { pumps, isLoading, error });
+
   const deleteMutation = useMutation({
     mutationFn: deletePump,
     onSuccess: () => {
@@ -21,7 +23,13 @@ const PumpList: React.FC = () => {
   };
 
   if (isLoading) return <div className="p-4">Loading pumps...</div>;
-  if (error) return <div className="p-4 text-red-500">Error loading pumps</div>;
+  if (error) {
+      console.error("PumpList error:", error);
+      return <div className="p-4 text-red-500">Error loading pumps: {JSON.stringify(error)}</div>;
+  }
+
+  // Ensure pumps is an array
+  const pumpList = Array.isArray(pumps) ? pumps : [];
 
   return (
     <div className="container mx-auto p-4">
@@ -43,7 +51,7 @@ const PumpList: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {pumps.map((pump: any) => (
+            {pumpList.map((pump: any) => (
               <tr key={pump.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{pump.manufacturer}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{pump.model}</td>
@@ -54,7 +62,7 @@ const PumpList: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {pumps.length === 0 && (
+            {pumpList.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No pumps found.</td>
               </tr>

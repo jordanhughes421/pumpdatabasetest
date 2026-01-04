@@ -51,6 +51,13 @@ class CurveSet(CurveSetBase, table=True):
 class CurveSeries(CurveSeriesBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
+    # New fields for Validation and Fitting
+    validation_warnings: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON))
+    fit_model_type: Optional[str] = None
+    fit_params: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    fit_quality: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    data_range: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+
     curve_set: Optional[CurveSet] = Relationship(back_populates="series")
     points: List["CurvePoint"] = Relationship(back_populates="series", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
@@ -77,6 +84,13 @@ class CurveSeriesCreate(CurveSeriesBase):
 class CurveSeriesRead(CurveSeriesBase):
     id: int
     points: List[CurvePointRead] = []
+
+    # Include new fields in response
+    validation_warnings: List[Dict[str, Any]] = []
+    fit_model_type: Optional[str] = None
+    fit_params: Optional[Dict[str, Any]] = None
+    fit_quality: Optional[Dict[str, Any]] = None
+    data_range: Optional[Dict[str, Any]] = None
 
 class CurveSetCreate(CurveSetBase):
     pass
