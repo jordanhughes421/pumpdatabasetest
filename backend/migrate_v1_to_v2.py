@@ -2,8 +2,24 @@ import sqlite3
 import os
 
 def migrate():
-    old_db = "pump_curves.db"
-    new_db = "pump_curves_v2.db"
+    # Paths compatible with both local dev (if running from backend dir) and Docker mount
+    # In Docker, we are in /app, so backend/ is where files are.
+    # But wait, local run is typically from root.
+    # Docker mount is /app/backend.
+
+    # Let's verify where we are.
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Assuming this script is in backend/ folder.
+    old_db = os.path.join(base_dir, "pump_curves.db")
+    new_db = os.path.join(base_dir, "pump_curves_v2.db")
+
+    # If using environment variable override
+    if "SQLITE_DB_PATH" in os.environ:
+         new_db = os.environ["SQLITE_DB_PATH"]
+
+    print(f"Old DB Path: {old_db}")
+    print(f"New DB Path: {new_db}")
 
     if not os.path.exists(old_db):
         print(f"No existing database {old_db} found. Skipping migration.")
