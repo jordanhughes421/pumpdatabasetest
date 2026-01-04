@@ -7,6 +7,7 @@ import PumpDetail from './pages/PumpDetail';
 import CurveSetDetail from './pages/CurveSetDetail';
 import Compare from './pages/Compare';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Admin from './pages/Admin';
 import InviteRedeem from './pages/InviteRedeem';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -71,6 +72,7 @@ function App() {
             <div className="flex-1">
                 <Routes>
                     <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
                     <Route path="/invite/:token" element={<InviteRedeem />} />
 
                     <Route path="/" element={<ProtectedRoute><PumpList /></ProtectedRoute>} />

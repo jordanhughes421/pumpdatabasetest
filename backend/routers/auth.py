@@ -8,6 +8,54 @@ from backend.dependencies import get_current_user, get_active_org, get_current_r
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+@router.post("/register", response_model=Token)
+def register(user_in: UserLogin, session: Session = Depends(get_session)):
+    # Check if user exists
+    existing_user = session.exec(select(User).where(User.email == user_in.email)).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    # Create User
+    user = User(
+        email=user_in.email,
+        hashed_password=get_password_hash(user_in.password),
+        is_active=True,
+        created_at=datetime.utcnow()
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    # Create default Organization for this user
+    org_name = f"{user_in.email.split('@')[0]}'s Org"
+    org = Organization(name=org_name, created_at=datetime.utcnow())
+    session.add(org)
+    session.commit()
+    session.refresh(org)
+
+    # Add Membership as Admin
+    membership = Membership(
+        user_id=user.id,
+        org_id=org.id,
+        role=UserRole.admin,
+        created_at=datetime.utcnow()
+    )
+    session.add(membership)
+    session.commit()
+
+    # Generate Token
+    access_token = create_access_token(data={"sub": user.email})
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=user,
+        active_org=org,
+        role=UserRole.admin
+    )
+
 @router.post("/login", response_model=Token)
 def login(user_in: UserLogin, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.email == user_in.email)).first()

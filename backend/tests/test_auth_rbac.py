@@ -84,6 +84,23 @@ def test_login(setup_data):
     assert "access_token" in data
     assert data["user"]["email"] == "admin@org1.com"
 
+def test_register(session):
+    response = client.post("/auth/register", json={"email": "new@neworg.com", "password": "secure"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["user"]["email"] == "new@neworg.com"
+    assert "access_token" in data
+
+    # Verify DB
+    user = session.exec(select(User).where(User.email == "new@neworg.com")).first()
+    assert user is not None
+
+    # Verify Org created
+    memberships = session.exec(select(Membership).where(Membership.user_id == user.id)).all()
+    assert len(memberships) == 1
+    assert memberships[0].role == UserRole.admin
+    assert memberships[0].organization.name == "new's Org"
+
 def test_org_scoping(setup_data, session):
     # 1. Admin Org 1 creates a pump
     admin = setup_data["admin_user"]
