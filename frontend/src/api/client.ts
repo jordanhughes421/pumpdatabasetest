@@ -65,3 +65,13 @@ export const deleteCurveSeries = async (seriesId: number) => {
     const response = await api.delete(`/curve-sets/series/${seriesId}`);
     return response.data;
 };
+
+export const validateCurvePoints = async (data: any) => {
+    const response = await api.post(`/curve-sets/validate`, data);
+    return response.data;
+};
+
+export const evaluateSeries = async (seriesId: number, flow: number, head: number | null) => {
+    const response = await api.post(`/curve-sets/series/${seriesId}/evaluate`, { flow, head_optional: head });
+    return response.data;
+};

@@ -14,6 +14,8 @@ const PumpDetail: React.FC = () => {
     enabled: !!pumpId
   });
 
+  console.log("PumpDetail render:", { pump, isLoading });
+
   const [newCurveName, setNewCurveName] = useState('');
 
   const createCurveMutation = useMutation({
