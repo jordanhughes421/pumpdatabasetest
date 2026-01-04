@@ -2,12 +2,17 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
+# Increase memory limit for Node.js process to avoid OOM
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Copy package.json from the frontend directory
 COPY frontend/package*.json ./
 RUN npm install
 
 # Copy the frontend source code
 COPY frontend/ .
+# Run build (tsc -b && vite build)
+# Note: If tsc consumes too much memory, we can use 'npx vite build' directly
 RUN npm run build
 
 FROM nginx:alpine
