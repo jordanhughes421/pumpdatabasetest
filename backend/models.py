@@ -60,6 +60,11 @@ class CurvePoint(CurvePointBase, table=True):
 
 # Pydantic Schemas for API
 
+class CurvePointInput(SQLModel):
+    flow: float
+    value: float
+    sequence: int = 0
+
 class CurvePointCreate(CurvePointBase):
     pass
 
@@ -67,7 +72,7 @@ class CurvePointRead(CurvePointBase):
     id: int
 
 class CurveSeriesCreate(CurveSeriesBase):
-    points: List[CurvePointCreate] = []
+    points: List[CurvePointInput] = []
 
 class CurveSeriesRead(CurveSeriesBase):
     id: int
