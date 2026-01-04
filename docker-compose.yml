@@ -5,9 +5,9 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
-      - ./database.db:/app/database.db
     environment:
       - PYTHONUNBUFFERED=1
+      - SQLITE_DB_PATH=/app/backend/database.db
 
   frontend:
     build: ./frontend
