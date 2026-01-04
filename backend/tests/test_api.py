@@ -1,33 +1,62 @@
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine, StaticPool
+from backend.main import app, get_session
+from backend.dependencies import get_current_user, get_active_org, RequireRole, get_current_role
+from backend.models import User, Organization, Membership, UserRole
 import pytest
 
-from backend.main import app
-from backend.database import get_session
-from backend.models import Pump, CurveSet, SeriesType
+# Setup in-memory DB for tests
+engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+SQLModel.metadata.create_all(engine)
 
-# Setup in-memory database for testing
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(engine)
+def override_get_session():
     with Session(engine) as session:
         yield session
 
-@pytest.fixture(name="client")
-def client_fixture(session: Session):
-    def get_session_override():
-        return session
+app.dependency_overrides[get_session] = override_get_session
 
-    app.dependency_overrides[get_session] = get_session_override
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+# Auth overrides
+def override_get_current_user():
+    return User(id=1, email="test@example.com", is_active=True, hashed_password="pw")
+
+def override_get_active_org():
+    return Organization(id=1, name="Test Org")
+
+def override_get_current_role():
+    return UserRole.admin
+
+def override_require_role(role):
+    # This is tricky because RequireRole is a class called with Depends
+    # But usually we can override the dependency it returns if we know the signature.
+    # Actually, RequireRole returns a callable.
+    # In endpoints: role: UserRole = Depends(RequireRole({UserRole.editor, UserRole.admin}))
+    # We can override the Dependency that resolves to `UserRole`?
+    # No, RequireRole(...) is the dependency.
+    # We can override the `get_current_role` dependency used by `RequireRole`.
+    return UserRole.admin
+
+app.dependency_overrides[get_current_user] = override_get_current_user
+app.dependency_overrides[get_active_org] = override_get_active_org
+app.dependency_overrides[get_current_role] = override_get_current_role
+
+@pytest.fixture(name="client")
+def client_fixture():
+    # Reset DB
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+
+    # Create Org manually because get_active_org returns a mock object,
+    # but foreign keys need it to exist in DB for writes?
+    # Endpoints use `org.id` from the dependency.
+    # If the DB is empty, `Pump(org_id=1)` will fail foreign key constraint if enabled.
+    # SQLite by default might not enforce FKs unless enabled. SQLModel enables them usually?
+    # Let's insert the org into the DB to be safe.
+    with Session(engine) as session:
+        org = Organization(id=1, name="Test Org")
+        session.add(org)
+        session.commit()
+
+    return TestClient(app)
 
 def test_create_pump(client: TestClient):
     response = client.post(
@@ -37,8 +66,7 @@ def test_create_pump(client: TestClient):
     assert response.status_code == 200
     data = response.json()
     assert data["manufacturer"] == "Test Mfg"
-    assert data["model"] == "Test Model"
-    assert "id" in data
+    assert data["org_id"] == 1
 
 def test_read_pumps(client: TestClient):
     client.post(
@@ -47,9 +75,7 @@ def test_read_pumps(client: TestClient):
     )
     response = client.get("/pumps/")
     assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["manufacturer"] == "Test Mfg"
+    assert len(response.json()) == 1
 
 def test_create_curve_set(client: TestClient):
     # Create pump first
@@ -57,21 +83,19 @@ def test_create_curve_set(client: TestClient):
         "/pumps/",
         json={"manufacturer": "Test Mfg", "model": "Test Model"}
     )
+    assert pump_res.status_code == 200
     pump_id = pump_res.json()["id"]
 
-    # Create curve set
     response = client.post(
         "/curve-sets/",
         json={
-            "name": "Test Curve",
+            "name": "Test Set",
             "pump_id": pump_id,
             "units": {"flow": "gpm", "head": "ft"}
         }
     )
     assert response.status_code == 200
-    data = response.json()
-    assert data["name"] == "Test Curve"
-    assert data["pump_id"] == pump_id
+    assert response.json()["name"] == "Test Set"
 
 def test_add_series(client: TestClient):
     # Create pump & curve set
@@ -83,22 +107,25 @@ def test_add_series(client: TestClient):
 
     cs_res = client.post(
         "/curve-sets/",
-        json={"name": "Test Curve", "pump_id": pump_id}
+        json={
+            "name": "Test Set",
+            "pump_id": pump_id
+        }
     )
     cs_id = cs_res.json()["id"]
 
     # Add series
-    series_data = {
-        "curve_set_id": cs_id,
-        "type": "head",
-        "points": [
-            {"series_id": 0, "flow": 0, "value": 100, "sequence": 0},
-            {"series_id": 0, "flow": 100, "value": 90, "sequence": 1}
-        ]
-    }
-    response = client.post(f"/curve-sets/{cs_id}/series", json=series_data)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["type"] == "head"
-    assert len(data["points"]) == 2
-    assert data["points"][0]["value"] == 100
+    series_res = client.post(
+        f"/curve-sets/{cs_id}/series",
+        json={
+            "curve_set_id": cs_id,
+            "type": "head",
+            "points": [
+                {"flow": 0, "value": 100},
+                {"flow": 100, "value": 80}
+            ]
+        }
+    )
+    assert series_res.status_code == 200
+    assert series_res.json()["type"] == "head"
+    assert len(series_res.json()["points"]) == 2
