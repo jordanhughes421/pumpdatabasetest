@@ -1,7 +1,8 @@
 import os
 from sqlmodel import SQLModel, create_engine, Session
 
-sqlite_file_name = os.environ.get("SQLITE_DB_PATH", "database.db")
+# Updated database name to force schema refresh for new features
+sqlite_file_name = os.environ.get("SQLITE_DB_PATH", "pump_curves.db")
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 connect_args = {"check_same_thread": False}
