@@ -30,6 +30,18 @@ api.interceptors.response.use(
     }
 );
 
+// Auth
+export const login = async (credentials: any) => {
+    const response = await api.post('/auth/login', credentials);
+    return response.data;
+};
+
+export const getMe = async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+};
+
+// Pumps
 export const getPumps = async () => {
   const response = await api.get('/pumps/');
   return response.data;
@@ -113,5 +125,10 @@ export const updateMemberRole = async (orgId: number, userId: number, role: stri
 
 export const removeMember = async (orgId: number, userId: number) => {
     const response = await api.delete(`/orgs/${orgId}/members/${userId}`);
+    return response.data;
+};
+
+export const redeemInvite = async (token: string) => {
+    const response = await api.post(`/orgs/invites/${token}/redeem`);
     return response.data;
 };

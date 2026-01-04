@@ -6,16 +6,12 @@ import uuid
 
 from backend.database import get_session
 from backend.models import (
-    User, UserRead, Organization, OrganizationRead, Membership, MembershipRead, UserRole
+    User, UserRead, Organization, OrganizationRead, Membership, MembershipRead, UserRole, Invite
 )
 from backend.dependencies import get_current_user, get_active_org, RequireRole, get_current_role
 from backend.auth_utils import get_password_hash
 
 router = APIRouter(prefix="/orgs", tags=["orgs"])
-
-# In-memory store for invites (MVP)
-# Key: token, Value: {org_id, role, email, expires_at}
-invites_db = {}
 
 @router.get("/{org_id}/members", response_model=List[MembershipRead])
 def read_members(
@@ -37,7 +33,8 @@ def update_member_role(
     role_update: UserRole = Body(..., embed=True),
     session: Session = Depends(get_session),
     active_org: Organization = Depends(get_active_org),
-    role: UserRole = Depends(RequireRole({UserRole.admin}))
+    current_role: UserRole = Depends(RequireRole({UserRole.admin})),
+    current_user: User = Depends(get_current_user)
 ):
     if active_org.id != org_id:
         raise HTTPException(status_code=403, detail="Cannot access other organization's members")
@@ -51,7 +48,8 @@ def update_member_role(
     if not membership:
         raise HTTPException(status_code=404, detail="Membership not found")
 
-    if membership.user_id == get_current_user:
+    # Corrected check
+    if membership.user_id == current_user.id:
          pass # Admin can change their own role, but warning: they might lock themselves out. Allowed for MVP.
 
     membership.role = role_update
@@ -97,12 +95,16 @@ def create_invite(
         raise HTTPException(status_code=403, detail="Cannot access other organization's invites")
 
     token = str(uuid.uuid4())
-    invites_db[token] = {
-        "org_id": org_id,
-        "role": role,
-        "email": email,
-        "expires_at": datetime.utcnow() + timedelta(days=1)
-    }
+
+    invite = Invite(
+        org_id=org_id,
+        role=role,
+        email=email,
+        expires_at=datetime.utcnow() + timedelta(days=1),
+        token=token
+    )
+    session.add(invite)
+    session.commit()
 
     # MVP: Return the link directly
     return {"invite_token": token, "invite_url": f"/invites/{token}"} # Frontend will handle the full URL
@@ -113,19 +115,20 @@ def redeem_invite(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    invite = invites_db.get(token)
+    invite = session.exec(select(Invite).where(Invite.token == token)).first()
     if not invite:
         raise HTTPException(status_code=404, detail="Invalid or expired invite")
 
-    if datetime.utcnow() > invite["expires_at"]:
-        del invites_db[token]
+    if datetime.utcnow() > invite.expires_at:
+        session.delete(invite)
+        session.commit()
         raise HTTPException(status_code=400, detail="Invite expired")
 
     # Check if user is already a member
     existing = session.exec(
         select(Membership)
         .where(Membership.user_id == user.id)
-        .where(Membership.org_id == invite["org_id"])
+        .where(Membership.org_id == invite.org_id)
     ).first()
 
     if existing:
@@ -134,11 +137,11 @@ def redeem_invite(
     # Create membership
     membership = Membership(
         user_id=user.id,
-        org_id=invite["org_id"],
-        role=invite["role"]
+        org_id=invite.org_id,
+        role=invite.role
     )
     session.add(membership)
+    session.delete(invite) # Consume invite
     session.commit()
 
-    del invites_db[token]
-    return {"ok": True, "org_id": invite["org_id"]}
+    return {"ok": True, "org_id": invite.org_id}

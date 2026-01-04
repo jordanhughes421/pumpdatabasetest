@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getMe } from '../api/client';
 
 interface User {
   email: string;
@@ -41,25 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = localStorage.getItem('token');
         if (token) {
             try {
-                const response = await fetch('/api/auth/me', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Use client which handles interceptors
+                const data = await getMe();
+                setState({
+                    token: token,
+                    user: data.user,
+                    activeOrg: data.active_org,
+                    role: data.role,
+                    isLoading: false
                 });
-                if (response.ok) {
-                    const data = await response.json();
-                    setState({
-                        token: token,
-                        user: data.user,
-                        activeOrg: data.active_org,
-                        role: data.role,
-                        isLoading: false
-                    });
-                    return;
-                } else {
-                    // Token invalid
-                    localStorage.removeItem('token');
-                }
+                return;
             } catch (e) {
                 console.error("Auth check failed", e);
+                localStorage.removeItem('token');
             }
         }
         setState(s => ({ ...s, token: null, isLoading: false }));

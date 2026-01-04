@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, StaticPool, select
 from backend.main import app, get_session
-from backend.models import User, Organization, Membership, UserRole, Pump
+from backend.models import User, Organization, Membership, UserRole, Pump, Invite
 from backend.auth_utils import create_access_token, get_password_hash
 import pytest
 import datetime
@@ -138,6 +138,11 @@ def test_invite_flow(setup_data, session):
     assert response.status_code == 200
     invite_token = response.json()["invite_token"]
 
+    # Verify invite in DB
+    invite = session.exec(select(Invite).where(Invite.token == invite_token)).first()
+    assert invite is not None
+    assert invite.role == UserRole.editor
+
     # New user (simulate registration)
     new_user = User(email="new@org1.com", hashed_password=get_password_hash("password"))
     session.add(new_user)
@@ -160,3 +165,7 @@ def test_invite_flow(setup_data, session):
     assert m is not None
     assert m.role == UserRole.editor
     assert m.org_id == setup_data["org1"].id
+
+    # Verify invite is gone
+    invite = session.exec(select(Invite).where(Invite.token == invite_token)).first()
+    assert invite is None

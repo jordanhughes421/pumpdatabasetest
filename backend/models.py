@@ -25,6 +25,13 @@ class UserBase(SQLModel):
 class MembershipBase(SQLModel):
     role: UserRole = UserRole.viewer
 
+class InviteBase(SQLModel):
+    org_id: int = Field(foreign_key="organization.id")
+    email: str
+    role: UserRole
+    expires_at: datetime
+    token: str = Field(unique=True, index=True)
+
 class PumpBase(SQLModel):
     manufacturer: str = Field(index=True)
     model: str = Field(index=True)
@@ -54,6 +61,7 @@ class Organization(OrganizationBase, table=True):
 
     memberships: List["Membership"] = Relationship(back_populates="organization")
     pumps: List["Pump"] = Relationship(back_populates="organization")
+    invites: List["Invite"] = Relationship(back_populates="organization")
 
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -71,6 +79,12 @@ class Membership(MembershipBase, table=True):
 
     user: User = Relationship(back_populates="memberships")
     organization: Organization = Relationship(back_populates="memberships")
+
+class Invite(InviteBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    organization: Organization = Relationship(back_populates="invites")
 
 class Pump(PumpBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

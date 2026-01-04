@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { login as apiLogin } from '../api/client';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,21 +15,11 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Invalid credentials');
-      }
-
-      const data = await response.json();
+      const data = await apiLogin({ email, password });
       login(data.access_token, data.user, data.active_org, data.role);
       navigate('/');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Login failed');
     }
   };
 
