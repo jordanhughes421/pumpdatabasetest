@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getPumps, getPump } from '../api/client';
+import { getPumps, getPump, getCurveSet } from '../api/client';
 import Plot from 'react-plotly.js';
-import axios from 'axios';
-
-// Helper to fetch full details of a curve set
-const fetchCurveSetDetails = async (curveSetId: number) => {
-    // Uses direct axios call, should match client config
-    const response = await axios.get(`/api/curve-sets/${curveSetId}`);
-    return response.data;
-};
 
 const Compare: React.FC = () => {
   const { data: pumps, isLoading: pumpsLoading } = useQuery({ queryKey: ['pumps'], queryFn: getPumps });
@@ -36,7 +28,8 @@ const Compare: React.FC = () => {
       } else {
           setSelectedCurveSetIds([...selectedCurveSetIds, id]);
           try {
-              const data = await fetchCurveSetDetails(id);
+              // Use the authenticated client function
+              const data = await getCurveSet(id);
               setCurveSetsData([...curveSetsData, data]);
           } catch (e) {
               console.error("Failed to fetch curve set", e);
