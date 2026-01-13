@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    # No ports exposed to host in production
+    volumes:
+      - ./backend_data:/app/backend_data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SQLITE_DB_PATH=/app/backend_data/pump_curves_v2.db
+    restart: always
+
+  reverse-proxy:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: always
